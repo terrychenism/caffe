@@ -188,6 +188,21 @@ cv::Mat DecodeDatumToCVMat(const Datum& datum, bool is_color) {
   return cv_img;
 }
 
+cv::Mat ResizeDatumToCVMat(const Datum& datum, bool is_color, int min_len, int max_len) {
+  cv::Mat cv_img_orig = DecodeDatumToCVMat(datum, is_color);
+  cv::Mat cv_img;
+  int resize_width, resize_height;
+  if( cv_img_orig.cols < cv_img_orig.rows){
+     resize_width = min_len + (rand() % (int)(max_len - min_len + 1));
+     resize_height = resize_width * cv_img_orig.rows/cv_img_orig.cols;
+  }
+  else{
+     resize_height = min_len + (rand() % (int)(max_len - min_len + 1));
+     resize_width = resize_height * cv_img_orig.cols / cv_img_orig.rows;
+  }
+  cv::resize(cv_img_orig, cv_img, cv::Size(resize_width, resize_height));
+  return cv_img;
+}
 // If Datum is encoded will decoded using DecodeDatumToCVMat and CVMatToDatum
 // If Datum is not encoded will do nothing
 bool DecodeDatumNative(Datum* datum) {

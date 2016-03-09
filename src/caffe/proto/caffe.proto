@@ -650,6 +650,9 @@ message DataParameter {
   // data access bandwidth varies).
   optional uint32 prefetch = 10 [default = 4];
   optional bool shuffle = 11 [default = false];
+  optional bool scale_augment = 12 [default = false];
+  optional uint32 min_len = 13 [default = 0];
+  optional uint32 max_len = 14 [default = 0];
 }
 
 message DropoutParameter {
