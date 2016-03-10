@@ -251,7 +251,7 @@ void Solver<Dtype>::Step(int iters) {
               << result_vec[k] << loss_msg_stream.str();
         }
       }
-      LOG_IF(INFO, Caffe::root_solver()) << "    Average iteration time: " << (iter_time / param_.display()) / 1000 << " ms";
+      LOG_IF(INFO, Caffe::root_solver()) << "    Average iteration time: " << (iter_time / (param_.iter_size()*param_.display())) / 1000 << " ms";
       iter_time = 0;
     }
     for (int i = 0; i < callbacks_.size(); ++i) {
