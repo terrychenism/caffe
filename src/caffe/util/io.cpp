@@ -200,7 +200,7 @@ cv::Mat ResizeDatumToCVMat(const Datum& datum, bool is_color, int min_len, int m
      resize_height = min_len + (rand() % (int)(max_len - min_len + 1));
      resize_width = resize_height * cv_img_orig.cols / cv_img_orig.rows;
   }
-  cv::resize(cv_img_orig, cv_img, cv::Size(resize_width, resize_height),cv::INTER_CUBIC);
+  cv::resize(cv_img_orig, cv_img, cv::Size(resize_width, resize_height),INTER_CUBIC);
   return cv_img;
 }
 // If Datum is encoded will decoded using DecodeDatumToCVMat and CVMatToDatum
