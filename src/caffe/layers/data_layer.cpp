@@ -1,6 +1,5 @@
 #ifdef USE_OPENCV
 #include <opencv2/core/core.hpp>
-#include <opencv/cv.h>
 #endif  // USE_OPENCV
 #include <stdint.h>
 
@@ -27,21 +26,11 @@ template <typename Dtype>
 void DataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   const int batch_size = this->layer_param_.data_param().batch_size();
-  const bool scale_augment  = this->layer_param_.data_param().scale_augment();
-  const int min_len = this->layer_param_.data_param().min_len();
-  const int max_len = this->layer_param_.data_param().max_len();
   // Read a data point, and use it to initialize the top blob.
   Datum& datum = *(reader_.full().peek());
-  vector<int> top_shape;
-  if(scale_augment) {
-    cv::Mat cv_img = ResizeDatumToCVMat(datum, true, min_len, max_len);
-    // Use data_transformer to infer the expected blob shape from cv_img.
-    top_shape = this->data_transformer_->InferBlobShape(cv_img);
-  }
-  else{
-    // Use data_transformer to infer the expected blob shape from datum.
-    top_shape = this->data_transformer_->InferBlobShape(datum);
-  }
+
+  // Use data_transformer to infer the expected blob shape from datum.
+  vector<int> top_shape = this->data_transformer_->InferBlobShape(datum);
   this->transformed_data_.Reshape(top_shape);
   // Reshape top[0] and prefetch_data according to the batch_size.
   top_shape[0] = batch_size;
@@ -76,22 +65,9 @@ void DataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
   // Reshape according to the first datum of each batch
   // on single input batches allows for inputs of varying dimension.
   const int batch_size = this->layer_param_.data_param().batch_size();
-  const bool scale_augment  = this->layer_param_.data_param().scale_augment();
-  const int min_len = this->layer_param_.data_param().min_len();
-  const int max_len = this->layer_param_.data_param().max_len();
-
   Datum& datum = *(reader_.full().peek());
-  vector<int> top_shape;
-  cv::Mat cv_img;
-  if(scale_augment) {
-    cv_img = ResizeDatumToCVMat(datum, true, min_len, max_len);
-    // Use data_transformer to infer the expected blob shape from cv_img.
-    top_shape = this->data_transformer_->InferBlobShape(cv_img);
-  }
-  else{
-    // Use data_transformer to infer the expected blob shape from datum.
-    top_shape = this->data_transformer_->InferBlobShape(datum);
-  }
+  // Use data_transformer to infer the expected blob shape from datum.
+  vector<int> top_shape = this->data_transformer_->InferBlobShape(datum);
   this->transformed_data_.Reshape(top_shape);
   // Reshape batch according to the batch_size.
   top_shape[0] = batch_size;
@@ -112,13 +88,7 @@ void DataLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     // Apply data transformations (mirror, scale, crop...)
     int offset = batch->data_.offset(item_id);
     this->transformed_data_.set_cpu_data(top_data + offset);
-    if(scale_augment){
-      cv_img = ResizeDatumToCVMat(datum, true, min_len, max_len);
-      this->data_transformer_->Transform(cv_img, &(this->transformed_data_));
-    }
-    else{
-      this->data_transformer_->Transform(datum, &(this->transformed_data_));
-    }
+    this->data_transformer_->Transform(datum, &(this->transformed_data_));
     // Copy label.
     if (this->output_labels_) {
       top_label[item_id] = datum.label();
