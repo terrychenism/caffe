@@ -58,6 +58,13 @@ class DataReader {
     const LayerParameter param_;
     BlockingQueue<shared_ptr<QueuePair> > new_queue_pairs_;
 
+    enum InputMode{
+      SEQUENCE, SHUFFLE
+    };
+    InputMode cur_input_mode_;
+    vector<string> shuffle_key_pool_;
+    vector<string>::iterator shuffle_cursor_;
+
     friend class DataReader;
 
   DISABLE_COPY_AND_ASSIGN(Body);
