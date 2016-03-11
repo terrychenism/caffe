@@ -7,6 +7,7 @@
 #include "caffe/data_reader.hpp"
 #include "caffe/layers/data_layer.hpp"
 #include "caffe/proto/caffe.pb.h"
+#include "caffe/util/rng.hpp"
 
 namespace caffe {
 
@@ -62,7 +63,8 @@ DataReader::QueuePair::~QueuePair() {
 
 DataReader::Body::Body(const LayerParameter& param)
     : param_(param),
-      new_queue_pairs_() {
+      new_queue_pairs_(), 
+      cur_input_mode_(SEQUENCE) {
   StartInternalThread();
 }
 
@@ -105,14 +107,37 @@ void DataReader::Body::InternalThreadEntry() {
 void DataReader::Body::read_one(db::Cursor* cursor, QueuePair* qp) {
   Datum* datum = qp->free_.pop();
   // TODO deserialize in-place instead of copy?
-  datum->ParseFromString(cursor->value());
+  if (cur_input_mode_ == SEQUENCE) {
+    datum->ParseFromString(cursor->value());
+    // put the key into shuffle pool
+    shuffle_key_pool_.push_back(cursor->key());
+  }
+  else if (cur_input_mode_ == SHUFFLE){
+    datum->ParseFromString(cursor->Lookup(*shuffle_cursor_));
+  }
   qp->full_.push(datum);
 
-  // go to the next iter
-  cursor->Next();
-  if (!cursor->valid()) {
-    DLOG(INFO) << "Restarting data prefetching from start.";
-    cursor->SeekToFirst();
+  if (cur_input_mode_ == SEQUENCE) {
+    cursor->Next();
+    if (!cursor->valid()) {
+      DLOG(INFO) << "Restarting data prefetching from start.";
+      cursor->SeekToFirst();
+
+      if (param_.data_param().shuffle()) { // shuffle
+        LOG(INFO) << "Entering shuffling mode after first epoch";
+        cur_input_mode_ = SHUFFLE;
+        shuffle(shuffle_key_pool_.begin(), shuffle_key_pool_.end());
+        shuffle_cursor_ = shuffle_key_pool_.begin();
+      }
+    }
+  }
+  else if (cur_input_mode_ == SHUFFLE){
+    shuffle_cursor_++;
+    if (shuffle_cursor_ == shuffle_key_pool_.end()){
+      LOG(INFO) << "Restarting stream and shuffle again";
+      shuffle(shuffle_key_pool_.begin(), shuffle_key_pool_.end());
+      shuffle_cursor_ = shuffle_key_pool_.begin();
+    }
   }
 }
 
